@@ -9,7 +9,7 @@ import taskRoutes from "./routes/task.routes.js";
 const app = express();
 
  app.use(cors({
-    origin: 'https://backbinnacleem-production.up.railway.app',
+    origin: 'https://react-frontend-production-c86d.up.railway.app',
     credentials:true
 
  }
