@@ -1,6 +1,7 @@
 import app from './app.js'
 import {connectDB} from './db.js'
 
+const PORT = process.env.PORT;
 connectDB();
-app.listen(4000)
-console.log('server port', 4000);
+app.listen(PORT)
+console.log('server port', PORT);
