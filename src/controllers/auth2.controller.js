@@ -1,30 +1,36 @@
-// import User from '../models/user.model.js';
+import User from '../models/user.model.js';
 import bycrypt from 'bcryptjs';
 import { createAccessToken } from '../libs/jwt.js';
 import  jwt  from 'jsonwebtoken';
 import { TOKEN_SECRET } from '../config.js';
-import { pool } from "../db.js";
 
 export const register = async (req, res) => {
-    const {email, password} = req.body;
-    try {        
-        const userFound = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
-        
-        if(userFound[0].length > 0){
+    const {email, password, username} = req.body;
+
+    try {
+
+        const userFound = await User.findOne({email});
+        if(userFound){
             return res.status(400).json(["The email is alredy in use"])
         }
         const pswHash = await bycrypt.hash(password,10);
-        
-        const userSaved = await pool.query(
-            "INSERT INTO users(email, psw, userType) VALUES (?, ?, ?)",
-            [email, pswHash, 2]
-          );
-
-        res.json({
-        id: userSaved[0].insertId,
-        email,
+        const newUser = new User({
+            username,
+            email,
+            password : pswHash
         });
-        
+    
+        const userSaved = await newUser.save();
+        const token = await createAccessToken({id:userSaved._id});
+        res.cookie("token",token);
+        res.json({
+            id:userSaved._id,
+            username: userSaved.username,
+            email : userSaved.email,
+            createdAt : userSaved.createdAt,
+            updatedAt : userSaved.updatedAt
+        });
+        // res.json(userSaved);
 
     } catch(error){
         console.log(error);
@@ -33,25 +39,26 @@ export const register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-    const {email, password} = req.body;
+    const {email, password, username} = req.body;
 
     try {
-        const result = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
-        if(result[0].length == 0) return res.status(400).json(["user not found"]);
-        const userFound = result[0][0];
-        
-        const isMatch = await bycrypt.compare(password, userFound.psw);
+        const userFound = await User.findOne({email});
+
+        if(!userFound) return res.status(400).json(["user not found"]);
+
+        const isMatch = await bycrypt.compare(password, userFound.password);
         if(!isMatch) return res.status(400).json(["Incorrect password"]);
 
-        const token = await createAccessToken({id:userFound.id});
-        res.cookie("token_binnacle",token);
+        const token = await createAccessToken({id:userFound._id});
+        res.cookie("token",token);
         res.json({
-            id:userFound.id,
+            id:userFound._id,
+            username: userFound.username,
             email : userFound.email,
             createdAt : userFound.createdAt,
-            updatedAt : userFound.updatedAt,
-            token:token,
+            updatedAt : userFound.updatedAt
         });
+        // res.json(userSaved);
 
     } catch(error){
         console.log(error);
@@ -60,7 +67,7 @@ export const login = async (req, res) => {
 };
 
 export const logout = (req, res) => {
-    res.cookie('token_binnacle', "", {
+    res.cookie('token', "", {
         expires: new Date(0)
     });
     return res.sendStatus(200);
