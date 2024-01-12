@@ -1,4 +1,3 @@
-// import Task from "../models/task.model.js";
 import { pool } from "../db.js";
 
 export const getRecords = async (req,res) => {    
@@ -7,7 +6,7 @@ export const getRecords = async (req,res) => {
        
         var result = [];
         console.log(userType);
-        if(userType[0].userType == 2){
+        if(userType[0].userType == 1){
             result = await pool.query("SELECT * FROM records");
         }else{
             result = await pool.query("SELECT * FROM records WHERE userId = ?", [req.user.id]);
@@ -48,7 +47,7 @@ export const getRecord = async (req,res) => {
         }
 
         if(userType[0][0].userType == 1 || record[0][0].userId == req.user.id){            
-            res.json(record[0]);
+            res.json(record[0][0]);
         }else{
             return res.status(401).json({message: "authorization denied"});
         }
@@ -86,4 +85,22 @@ export const deleteRecords = async (req,res) => {
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
+};
+
+export const getRecordsDate = async (req,res) => {     
+  try {
+      const [userType] = await pool.query("SELECT userType FROM users WHERE id = ?", [req.user.id]);
+     
+      var result = [];
+      console.log(userType);
+      if(userType[0].userType == 1){
+          result = await pool.query("SELECT * FROM records WHERE date >= ? and date <= ?",[req.params.from,req.params.to]);
+      }else{
+          result = await pool.query("SELECT * FROM records WHERE userId = ? and date >= ? and date <= ?", [req.user.id,req.params.from,req.params.to]);
+      }
+      
+      res.json(result[0]);
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
 };
